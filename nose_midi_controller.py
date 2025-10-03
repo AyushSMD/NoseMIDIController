@@ -56,7 +56,7 @@ else:
     for i, cam_info in enumerate(camera_list):
         print(f"  [{i}] Index: {cam_info.index}, Name: {cam_info.name}")
 
-    camera_index = int(input("Enter camera index:"))
+    camera_index = int(input("Enter camera index: "))
     selected_cam = camera_list[camera_index]
     cap = cv2.VideoCapture(selected_cam.index, selected_cam.backend)
     if not cap.isOpened():
@@ -64,6 +64,21 @@ else:
         sys.exit(1)
     else:
         print(f"Successfully opened camera: {selected_cam.name}")
+
+# -----------------------------
+# Welcome Message
+# -----------------------------
+start_time = time.time()
+while time.time() - start_time < 3:  # show for 3 seconds
+    ret, frame = cap.read()
+    if not ret:
+        continue
+    h, w, _ = frame.shape
+    cv2.putText(frame, "Welcome to Nose MIDI Controller!", (50, h//2),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 3, cv2.LINE_AA)
+    cv2.imshow("Nose Tracker", frame)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        sys.exit(0)
 
 # -----------------------------
 # Calibration Function
@@ -124,6 +139,7 @@ print(f"Calibration complete: min_y={min_y:.3f}, max_y={max_y:.3f}")
 # Main Loop
 # -----------------------------
 prev_midi_value = -1  # previous MIDI value to reduce unnecessary messages
+alpha = 0.2           # smoothing factor
 
 print("🎥 Running Nose MIDI Controller...")
 print("👉 Press 'q' to quit, 'r' to recalibrate")
@@ -160,17 +176,17 @@ while True:
         midi_value = int((max_y - nose_tip.y) / (max_y - min_y) * 127)
         midi_value = max(0, min(127, midi_value))
 
-        alpha = 0.2  # smoothing factor
+        # Apply smoothing
         smoothed_midi = prev_midi_value if prev_midi_value != -1 else midi_value
         smoothed_midi = int(prev_midi_value * (1 - alpha) + midi_value * alpha)
 
-        # Send MIDI only if smoothed value changed
+        # Send MIDI only if changed
         if smoothed_midi != prev_midi_value:
             send_midi_control(smoothed_midi)
             prev_midi_value = smoothed_midi
 
-        # Show MIDI value
-        cv2.putText(frame, f"MIDI: {midi_value}", (20, 70),
+        # Show smoothed MIDI value
+        cv2.putText(frame, f"MIDI: {smoothed_midi}", (20, 70),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 
     cv2.imshow("Nose Tracker", frame)
