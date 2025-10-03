@@ -1,0 +1,4 @@
+opencv-python
+python-rtmidi
+mediapipe
+cv2_enumerate_cameras
